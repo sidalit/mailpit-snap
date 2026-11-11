@@ -1,0 +1,10 @@
+#!/bin/sh
+# sendmail replacement: deliver to the SMTP address of the service.
+set -eu
+
+. "$SNAP/bin/mailpit-env"
+
+export MP_SENDMAIL_SMTP_ADDR="${MP_SENDMAIL_SMTP_ADDR:-$(address smtp)}"
+
+# The executable acts as sendmail when started under that name.
+exec "$SNAP/bin/sendmail" "$@"

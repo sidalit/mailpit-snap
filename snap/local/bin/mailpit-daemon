@@ -1,0 +1,27 @@
+#!/bin/sh
+# Start the service with the settings from mailpit.env and `snap set mailpit ...`.
+set -eu
+
+# Captured mail is readable by root only.
+umask 077
+
+. "$SNAP/bin/mailpit-env"
+
+# Defaults that mailpit.env may change.
+export MP_DATABASE="$SNAP_COMMON/mailpit.db"
+# Updates come from the Snap Store.
+export MP_DISABLE_VERSION_CHECK=true
+
+if [ -f "$SNAP_COMMON/mailpit.env" ]; then
+  set -a
+  . "$SNAP_COMMON/mailpit.env"
+  set +a
+fi
+
+# Snap options take precedence over mailpit.env.
+MP_SMTP_BIND_ADDR="$(address smtp)"
+MP_UI_BIND_ADDR="$(address http)"
+MP_POP3_BIND_ADDR="$(address pop3)"
+export MP_SMTP_BIND_ADDR MP_UI_BIND_ADDR MP_POP3_BIND_ADDR
+
+exec "$SNAP/bin/mailpit"

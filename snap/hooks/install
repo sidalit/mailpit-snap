@@ -1,0 +1,27 @@
+#!/bin/sh
+# Create the file for upstream settings. It can hold passwords: root only.
+set -eu
+
+env="$SNAP_COMMON/mailpit.env"
+if [ ! -e "$env" ]; then
+  umask 077
+  cat > "$env" <<'ENV'
+# Mailpit settings, one MP_VARIABLE=value per line in shell syntax; see
+# https://mailpit.axllent.org/docs/configuration/runtime-options/
+# Restart after editing: sudo snap restart mailpit.daemon
+#
+# The listen addresses are snap options (sudo snap set mailpit ...); they
+# take precedence over MP_SMTP_BIND_ADDR, MP_UI_BIND_ADDR and MP_POP3_BIND_ADDR.
+# Files named here must be under /var/snap/mailpit/common.
+#
+# MP_MAX_MESSAGES=500
+# MP_MAX_AGE=7d
+# MP_UI_AUTH_FILE=/var/snap/mailpit/common/ui-auth
+# MP_UI_TLS_CERT=/var/snap/mailpit/common/cert.pem
+# MP_UI_TLS_KEY=/var/snap/mailpit/common/key.pem
+# MP_SMTP_AUTH_ACCEPT_ANY=true
+# MP_SMTP_AUTH_ALLOW_INSECURE=true
+# MP_SMTP_RELAY_CONFIG=/var/snap/mailpit/common/relay.yaml
+# MP_POP3_AUTH_FILE=/var/snap/mailpit/common/pop3-auth
+ENV
+fi

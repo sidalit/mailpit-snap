@@ -1,0 +1,137 @@
+name: mailpit
+base: core26
+version: '1.33.1'
+title: Mailpit
+icon: snap/gui/mailpit.png
+summary: Email and SMTP testing tool with a web interface and an API
+description: |
+  Mailpit catches the email your applications send. Its SMTP server stores
+  every message, a web interface shows them (HTML, text, source, headers
+  and attachments) and a REST API lets automated tests read them. It also
+  offers message tagging, HTML and link checks, SMTP relaying and an
+  optional POP3 server.
+
+  **Getting started**
+
+  The service starts right after installation and listens on this machine
+  only: SMTP on 127.0.0.1:1025, the web interface and API on
+  http://127.0.0.1:8025. Send a test message:
+
+     printf 'To: you@example.com\nSubject: Test\n\nHello\n' | mailpit sendmail
+
+  **Settings**
+
+     sudo snap set mailpit smtp-address=0.0.0.0:1025
+     sudo snap set mailpit http-address=0.0.0.0:8025
+
+  Other upstream settings, such as authentication, TLS, relaying and
+  message limits, go in /var/snap/mailpit/common/mailpit.env as MP_*
+  variables. Restart the service after editing it:
+
+     sudo snap restart mailpit.daemon
+
+  **sendmail**
+
+  mailpit.sendmail is a sendmail replacement that delivers to the service.
+
+  Captured mail is stored in /var/snap/mailpit/common. Updates come through
+  snap refresh; the upstream version check is disabled.
+license: MIT
+grade: stable
+confinement: strict
+website: https://mailpit.axllent.org
+source-code:
+  - https://github.com/axllent/mailpit
+  - https://github.com/sidalit/mailpit-snap
+issues:
+  - https://github.com/axllent/mailpit/issues
+  - https://github.com/sidalit/mailpit-snap/issues
+contact: https://github.com/sidalit/mailpit-snap/issues
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  mailpit:
+    command: bin/mailpit-cli
+    completer: share/bash-completion/completions/mailpit
+    plugs:
+      - home
+      - network
+      - network-bind
+  sendmail:
+    command: bin/mailpit-sendmail
+    plugs:
+      - network
+  daemon:
+    command: bin/mailpit-daemon
+    daemon: simple
+    restart-condition: on-failure
+    plugs:
+      - network
+      - network-bind
+
+parts:
+  go-licenses:
+    plugin: nil
+    build-snaps:
+      - go/1.27/stable
+    build-environment:
+      - GOTOOLCHAIN: local
+    override-build: |
+      # Upstream's release build embeds the licenses this tool collects.
+      GOBIN="$CRAFT_PART_INSTALL/bin" go install github.com/google/go-licenses/v2@v2.0.1
+    prime:
+      - -*
+
+  mailpit:
+    after: [go-licenses]
+    plugin: nil
+    source: https://github.com/axllent/mailpit.git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    source-depth: 1
+    build-snaps:
+      - go/1.27/stable
+      - node/22/stable
+    build-packages:
+      - git
+    build-environment:
+      - CGO_ENABLED: '0'
+      - GOTOOLCHAIN: local
+    override-build: |
+      # The web interface is embedded into the binary.
+      npm ci
+      npm run package
+
+      # Third-party licenses shown in the web interface, as in upstream's release build.
+      "$CRAFT_STAGE/bin/go-licenses" report ./... \
+        --template .github/third-party-licenses.tpl \
+        --ignore github.com/axllent/mailpit > internal/licenses/third-party.txt
+
+      # Releases report the upstream tag, as upstream's own builds do.
+      version="$(craftctl get version)"
+      case "$version" in
+        [0-9]*) version="v$version" ;;
+      esac
+      go build -trimpath \
+        -ldflags "-s -w -X github.com/axllent/mailpit/config.Version=$version" \
+        -o "$CRAFT_PART_INSTALL/bin/mailpit" .
+      # The executable acts as sendmail when started under that name.
+      ln -sf mailpit "$CRAFT_PART_INSTALL/bin/sendmail"
+
+      # The generated script calls old bash-completion helper names, which a snap
+      # only gets from the host's /etc. The prepended file defines them when missing.
+      completion="$CRAFT_PART_INSTALL/share/bash-completion/completions/mailpit"
+      install -Dm644 "$CRAFT_PROJECT_DIR/snap/local/completion-compat.bash" "$completion"
+      "$CRAFT_PART_INSTALL/bin/mailpit" completion bash >> "$completion"
+      install -Dm644 LICENSE "$CRAFT_PART_INSTALL/share/doc/mailpit/LICENSE"
+      install -Dm644 internal/licenses/third-party.txt \
+        "$CRAFT_PART_INSTALL/share/doc/mailpit/third-party.txt"
+
+  scripts:
+    plugin: dump
+    source: snap/local
+    # completion-compat.bash is only used while building the mailpit part.
+    stage:
+      - bin
