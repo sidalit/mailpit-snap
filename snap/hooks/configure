@@ -1,5 +1,4 @@
 #!/bin/sh
-# Validate `snap set mailpit ...` and restart the service so changes apply.
 set -eu
 
 . "$SNAP/bin/mailpit-env"
@@ -8,7 +7,6 @@ for listener in smtp http pop3; do
   key="$listener-address"
   value="$(snapctl get "$key")"
   if [ -z "$value" ]; then
-    # An unset option returns to its default.
     value="$(default_address "$listener")"
     snapctl set "$key=$value"
   fi
@@ -37,7 +35,6 @@ if [ "$smtp" = "$http" ] || [ "$smtp" = "$pop3" ] || [ "$http" = "$pop3" ]; then
   exit 1
 fi
 
-# Also restart an enabled service that is down, so fixing a bad value brings it back.
 if snapctl services "$SNAP_INSTANCE_NAME.daemon" | grep -qwE 'enabled|active'; then
   snapctl restart "$SNAP_INSTANCE_NAME.daemon"
 fi

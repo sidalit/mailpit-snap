@@ -1,6 +1,4 @@
 #!/bin/sh
-# Run mailpit with the listen addresses of the service, so that `mailpit sendmail`,
-# `mailpit ingest` and `mailpit readyz` reach it without extra options.
 set -eu
 
 . "$SNAP/bin/mailpit-env"
@@ -10,7 +8,6 @@ export MP_SMTP_BIND_ADDR="${MP_SMTP_BIND_ADDR:-$smtp}"
 export MP_UI_BIND_ADDR="${MP_UI_BIND_ADDR:-$(address http)}"
 export MP_POP3_BIND_ADDR="${MP_POP3_BIND_ADDR:-$(address pop3)}"
 export MP_SENDMAIL_SMTP_ADDR="${MP_SENDMAIL_SMTP_ADDR:-$smtp}"
-# Updates come from the Snap Store.
 export MP_DISABLE_VERSION_CHECK="${MP_DISABLE_VERSION_CHECK:-true}"
 
 case "${1:-}" in

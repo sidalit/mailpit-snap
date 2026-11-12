@@ -80,7 +80,6 @@ parts:
     build-environment:
       - GOTOOLCHAIN: local
     override-build: |
-      # Upstream's release build embeds the licenses this tool collects.
       GOBIN="$CRAFT_PART_INSTALL/bin" go install github.com/google/go-licenses/v2@v2.0.1
     prime:
       - -*
@@ -100,16 +99,13 @@ parts:
       - CGO_ENABLED: '0'
       - GOTOOLCHAIN: local
     override-build: |
-      # The web interface is embedded into the binary.
       npm ci
       npm run package
 
-      # Third-party licenses shown in the web interface, as in upstream's release build.
       "$CRAFT_STAGE/bin/go-licenses" report ./... \
         --template .github/third-party-licenses.tpl \
         --ignore github.com/axllent/mailpit > internal/licenses/third-party.txt
 
-      # Releases report the upstream tag, as upstream's own builds do.
       version="$(craftctl get version)"
       case "$version" in
         [0-9]*) version="v$version" ;;
@@ -117,11 +113,8 @@ parts:
       go build -trimpath \
         -ldflags "-s -w -X github.com/axllent/mailpit/config.Version=$version" \
         -o "$CRAFT_PART_INSTALL/bin/mailpit" .
-      # The executable acts as sendmail when started under that name.
       ln -sf mailpit "$CRAFT_PART_INSTALL/bin/sendmail"
 
-      # The generated script calls old bash-completion helper names, which a snap
-      # only gets from the host's /etc. The prepended file defines them when missing.
       completion="$CRAFT_PART_INSTALL/share/bash-completion/completions/mailpit"
       install -Dm644 "$CRAFT_PROJECT_DIR/snap/local/completion-compat.bash" "$completion"
       "$CRAFT_PART_INSTALL/bin/mailpit" completion bash >> "$completion"
@@ -132,6 +125,5 @@ parts:
   scripts:
     plugin: dump
     source: snap/local
-    # completion-compat.bash is only used while building the mailpit part.
     stage:
       - bin

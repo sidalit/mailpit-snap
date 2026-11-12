@@ -1,5 +1,5 @@
 #!/bin/sh
-# Create the file for upstream settings. It can hold passwords: root only.
+# mailpit.env can hold passwords.
 set -eu
 
 env="$SNAP_COMMON/mailpit.env"
